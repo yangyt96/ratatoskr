@@ -46,6 +46,13 @@ public:
     std::vector<float> xPositions;
     std::vector<float> yPositions;
     std::vector<float> zPositions;
+    float z_step;
+    std::vector<float> y_step;
+    std::vector<float> x_step;
+    std::vector<float> z_range;
+    std::vector<std::vector<float>> y_range;
+    std::vector<std::vector<float>> x_range;
+    std::map<Vec3D<float>, Vec3D<int>> norm_to_coord; // normalised coordinate to integer coorinate
     //General
     int simulation_time;
     bool outputToFile;

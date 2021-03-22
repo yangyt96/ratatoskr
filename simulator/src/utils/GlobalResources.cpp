@@ -287,6 +287,63 @@ void GlobalResources::readNoCLayout(const std::string &nocPath)
     topology = noc_node.child_value("topology");
     routingCircular = std::set<std::string>({std::string("torus"), std::string("ring")}).count(topology);
 
+    pugi::xml_node abstract = noc_node.child("abstract");
+
+    // init
+    for (int i = 0; i < abstract.child("z").attribute("value").as_int(); i++)
+    {
+        y_step.push_back((float)-1);
+        x_step.push_back((float)-1);
+        x_range.push_back(*new std::vector<float>);
+        y_range.push_back(*new std::vector<float>);
+    }
+
+    // xyz step value
+    z_step = abstract.child("z").child("zStep").attribute("value").as_float();
+    for (pugi::xml_node node : abstract.child("y").children("layer"))
+        y_step[node.attribute("value").as_int()] = node.child("yStep").attribute("value").as_float();
+    for (pugi::xml_node node : abstract.child("x").children("layer"))
+        x_step[node.attribute("value").as_int()] = node.child("xStep").attribute("value").as_float();
+
+    // xyz range value
+    float temp_float;
+    std::string str;
+    std::stringstream sstr;
+
+    str = abstract.child("z").child_value("zRange");
+    sstr = std::stringstream(str);
+    while (sstr >> temp_float)
+        z_range.push_back(temp_float);
+    for (pugi::xml_node node : abstract.child("y").children("layer"))
+    {
+        str = node.child_value("yRange");
+        sstr = std::stringstream(str);
+        while (sstr >> temp_float)
+            y_range[node.attribute("value").as_int()].push_back(temp_float);
+    }
+    for (pugi::xml_node node : abstract.child("x").children("layer"))
+    {
+        str = node.child_value("xRange");
+        sstr = std::stringstream(str);
+        while (sstr >> temp_float)
+            x_range[node.attribute("value").as_int()].push_back(temp_float);
+    }
+
+    Vec3D<float> temp_norm;
+    Vec3D<int> temp_coord;
+    for (int zi = 0; zi < z_range.size(); zi++)
+        for (int yi = 0; yi < y_range[zi].size(); yi++)
+            for (int xi = 0; xi < x_range[zi].size(); xi++)
+            {
+                temp_coord.x = xi;
+                temp_coord.y = yi;
+                temp_coord.z = zi;
+                temp_norm.x = x_range[zi][xi];
+                temp_norm.y = y_range[zi][yi];
+                temp_norm.z = z_range[zi];
+                norm_to_coord[temp_norm] = temp_coord;
+            }
+
     readNodeTypes(noc_node);
     readNodes(noc_node);
     readConnections(noc_node);
@@ -394,21 +451,30 @@ void GlobalResources::fillDirInfoOfNodeConn()
             }
             else
             { //one axis differs
-                if (routingCircular && xPositions.size() > 2 && (node.pos.x == 0. && connectedNode.pos.x == 1. && node.pos.y == connectedNode.pos.y))
+                int layer = norm_to_coord[node.pos].z;
+                if (routingCircular && x_range[layer].size() > 2 && (node.pos.x == 0. && connectedNode.pos.x == 1. && node.pos.y == connectedNode.pos.y && node.pos.z == connectedNode.pos.z))
                 {
                     dir = DIR::West;
                 }
-                else if (routingCircular && xPositions.size() > 2 && (node.pos.x == 1. && connectedNode.pos.x == 0. && node.pos.y == connectedNode.pos.y))
+                else if (routingCircular && x_range[layer].size() > 2 && (node.pos.x == 1. && connectedNode.pos.x == 0. && node.pos.y == connectedNode.pos.y && node.pos.z == connectedNode.pos.z))
                 {
                     dir = DIR::East;
                 }
-                else if (routingCircular && yPositions.size() > 2 && (node.pos.y == 0. && connectedNode.pos.y == 1. && node.pos.x == connectedNode.pos.x))
+                else if (routingCircular && y_range[layer].size() > 2 && (node.pos.y == 0. && connectedNode.pos.y == 1. && node.pos.x == connectedNode.pos.x && node.pos.z == connectedNode.pos.z))
                 {
                     dir = DIR::South;
                 }
-                else if (routingCircular && yPositions.size() > 2 && (node.pos.y == 1. && connectedNode.pos.y == 0. && node.pos.x == connectedNode.pos.x))
+                else if (routingCircular && y_range[layer].size() > 2 && (node.pos.y == 1. && connectedNode.pos.y == 0. && node.pos.x == connectedNode.pos.x && node.pos.z == connectedNode.pos.z))
                 {
                     dir = DIR::North;
+                }
+                else if (routingCircular && z_range.size() > 2 && (node.pos.z == 0. && connectedNode.pos.z == 1. && node.pos.x == connectedNode.pos.x && node.pos.y == connectedNode.pos.y))
+                {
+                    dir = DIR::Down;
+                }
+                else if (routingCircular && z_range.size() > 2 && (node.pos.z == 1. && connectedNode.pos.z == 0. && node.pos.x == connectedNode.pos.x && node.pos.y == connectedNode.pos.y))
+                {
+                    dir = DIR::Up;
                 }
                 else if (distance.x > 0)
                 {
