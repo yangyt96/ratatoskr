@@ -344,18 +344,6 @@ void GlobalResources::readNoCLayout(const std::string &nocPath)
                 norm_to_coord[temp_norm] = temp_coord;
             }
 
-    readNodeTypes(noc_node);
-    readNodes(noc_node);
-    readConnections(noc_node);
-    if (!RoutingTable_mode)
-    {
-        fillDirInfoOfNodeConn();
-    }
-    else
-    {
-        fillDirInfoOfNodeConn_DM();
-    }
-
 #ifdef ENABLE_NETRACE
     int temp_z = noc_node.child("abstract").child("z").attribute("value").as_int();
     std::vector<int> temp_xs;
@@ -369,12 +357,12 @@ void GlobalResources::readNoCLayout(const std::string &nocPath)
     while (iss >> temp)
         temp_ys.push_back(temp);
     int node_count = 0;
-    for(int i = 0; i < temp_z; i++)
+    for (int i = 0; i < temp_z; i++)
         node_count += (temp_xs[i] * temp_ys[i]);
 
     // make sure node_count always larger equal than 64, because netrace simulates 64 nodes
     // this line is to make it compatible for old simulation (old network.xml do not have xs, ys & z values.)
-    node_count = (node_count > 64)? node_count : 64;
+    node_count = (node_count > 64) ? node_count : 64;
 
     for (int i = 0; i < node_count; ++i)
     {
@@ -382,6 +370,18 @@ void GlobalResources::readNoCLayout(const std::string &nocPath)
         netraceTaskToNode.insert(std::pair<nodeID_t, int>(i, i + node_count));
     }
 #endif
+
+    readNodeTypes(noc_node);
+    readNodes(noc_node);
+    readConnections(noc_node);
+    if (!RoutingTable_mode)
+    {
+        fillDirInfoOfNodeConn();
+    }
+    else
+    {
+        fillDirInfoOfNodeConn_DM();
+    }
 }
 
 void GlobalResources::readNodeTypes(const pugi::xml_node &noc_node)
